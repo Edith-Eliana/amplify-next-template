@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión - ISTP J.M.A.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .sidebar { transition: transform 0.3s ease-in-out; }
+        .main-content { transition: margin-left 0.3s ease-in-out; }
+        .sidebar-closed { transform: translateX(-100%); }
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+        }
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+        }
+        #save-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #28a745;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            z-index: 100;
+            transition: opacity 0.5s, transform 0.5s;
+            opacity: 0;
+            transform: translateY(100%);
+        }
+        #save-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* Login Styles */
+        .login-bg {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), url('https://jma.edu.pe/img/locales/sede_principal_sicaya_3.JPG');
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="fixed inset-0 login-bg flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md mx-4 animate-fade-in-up">
+            <div class="text-center mb-8">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTOVBrQIgjyRSHxz3fdYR60NNSWAWBtj_t8kBnVCDO5a4UWBHjLcWkXInMjhjZoxzZxX-Q&usqp=CAU" alt="Logo ISTP J.M.A." class="w-24 h-24 mx-auto mb-4 object-contain">
+                <h2 class="text-2xl font-bold text-[#B02828]">ISTP J.M. Arguedas</h2>
+                <p class="text-gray-500 text-sm">Sistema de Gestión Académica</p>
+            </div>
+            
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700">Usuario</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400"></i>
+                        </div>
+                        <input type="text" id="username" class="focus:ring-[#B02828] focus:border-[#B02828] block w-full pl-10 sm:text-sm border-gray-300 rounded-md p-2.5 border" placeholder="Usuario" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-400"></i>
+                        </div>
+                        <input type="password" id="password" class="focus:ring-[#B02828] focus:border-[#B02828] block w-full pl-10 sm:text-sm border-gray-300 rounded-md p-2.5 border" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <div id="login-error" class="text-red-600 text-sm text-center hidden">
+                    Usuario o contraseña incorrectos
+                </div>
+
+                <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#B02828] hover:bg-[#8F2020] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#B02828] transition duration-150">
+                    Ingresar al Sistema
+                </button>
+            </form>
+            <div class="mt-6 text-center text-xs text-gray-400">
+                &copy; 2025 ISTP José María Arguedas - Sicaya
+            </div>
+        </div>
+    </div>
+
+    <!-- App Container (Initially Hidden) -->
+    <div id="app-container" class="flex h-screen hidden">
+        <!-- Sidebar Rojo Institucional -->
+        <aside id="sidebar" class="sidebar bg-[#B02828] text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 md:relative md:translate-x-0">
+            <a href="#" class="text-white flex flex-col items-center justify-center text-center px-4">
+                <!-- Logo actualizado -->
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTOVBrQIgjyRSHxz3fdYR60NNSWAWBtj_t8kBnVCDO5a4UWBHjLcWkXInMjhjZoxzZxX-Q&usqp=CAU" alt="Logo ISTP J.M.A." class="rounded-full mb-2 w-20 h-20 object-contain bg-white p-1">
+                <span class="text-lg font-extrabold">ISTP J.M.A.</span>
+                <span class="text-xs font-light">SICAYA - HUANCAYO</span>
+            </a>
+
+            <nav>
+                <a href="#dashboard" class="nav-link block py-2.5 px-4 rounded transition duration-200 bg-[#8F2020] hover:bg-[#8F2020]">
+                    <i class="fas fa-home mr-2"></i>Panel de Control
+                </a>
+                <a href="#students" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-[#8F2020]">
+                    <i class="fas fa-user-graduate mr-2"></i>Estudiantes
+                </a>
+                <a href="#courses" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-[#8F2020]">
+                    <i class="fas fa-book mr-2"></i>Cursos
+                </a>
+                <a href="#grades" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-[#8F2020]">
+                    <i class="fas fa-marker mr-2"></i>Calificaciones
+                </a>
+                <a href="#calendar" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-[#8F2020]">
+                    <i class="fas fa-calendar-alt mr-2"></i>Calendario
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main content -->
+        <div id="main-content" class="main-content flex-1 flex flex-col overflow-hidden">
+            <header class="flex justify-between items-center p-4 bg-white border-b-2 border-gray-200">
+                <div class="flex items-center">
+                    <button id="menu-button" class="text-gray-500 focus:outline-none md:hidden">
+                        <i class="fas fa-bars fa-lg"></i>
+                    </button>
+                    <h1 id="page-title" class="text-2xl font-semibold text-gray-800 ml-4">Panel de Control</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-600">Bienvenido, <span id="admin-name">Admin</span></span>
+                    <img class="h-10 w-10 rounded-full object-cover" src="https://placehold.co/100x100/B02828/FFFFFF?text=A" alt="Avatar de usuario">
+                    <button id="logout-btn" class="text-gray-500 hover:text-[#B02828] ml-2 p-2 rounded transition-colors" title="Cerrar Sesión">
+                        <i class="fas fa-sign-out-alt fa-lg"></i>
+                    </button>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+                <!-- Dashboard Page -->
+                <section id="dashboard" class="page">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white p-5 rounded-lg shadow">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-[#B02828] text-white">
+                                    <i class="fas fa-user-graduate fa-lg"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-gray-500">Total Estudiantes</p>
+                                    <p id="total-students-stat" class="text-2xl font-bold text-gray-800">0</p>
+                                </div>
+                            </div>
+                        </div>
+                         <div class="bg-white p-5 rounded-lg shadow">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-green-600 text-white">
+                                    <i class="fas fa-chalkboard-teacher fa-lg"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-gray-500">Total Docentes</p>
+                                    <p class="text-2xl font-bold text-gray-800">25</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-lg shadow">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-yellow-500 text-white">
+                                    <i class="fas fa-book-open fa-lg"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-gray-500">Total Cursos</p>
+                                    <p id="total-courses-stat" class="text-2xl font-bold text-gray-800">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-lg shadow">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-red-500 text-white">
+                                    <i class="fas fa-calendar-check fa-lg"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-gray-500">Eventos Próximos</p>
+                                    <p class="text-2xl font-bold text-gray-800">3</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">Rendimiento por Carrera</h3>
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">Distribución de Estudiantes por Carrera</h3>
+                            <canvas id="distributionChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Students Page -->
+                <section id="students" class="page hidden">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex justify-between items-center mb-4">
+                            <input type="text" id="student-search" placeholder="Buscar estudiante..." class="w-1/3 p-2 border border-gray-300 rounded">
+                            <button id="add-student-btn" class="bg-[#B02828] text-white px-4 py-2 rounded hover:bg-[#8F2020]">
+                                <i class="fas fa-plus mr-2"></i>Añadir Estudiante
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="bg-gray-200 text-gray-600">
+                                        <th class="p-3">ID</th>
+                                        <th class="p-3">Nombre</th>
+                                        <th class="p-3">Carrera</th>
+                                        <th class="p-3">Fecha de Ingreso</th>
+                                        <th class="p-3">Estado</th>
+                                        <th class="p-3">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-table-body">
+                                    <!-- Rows will be inserted by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Courses Page -->
+                <section id="courses" class="page hidden">
+                    <div id="careers-view">
+                        <h3 class="text-2xl font-semibold text-gray-700 mb-6">Programas de Estudio</h3>
+                        <div id="careers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Career cards will be inserted by JavaScript -->
+                        </div>
+                    </div>
+                    <div id="courses-view" class="hidden">
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex justify-between items-center mb-4">
+                                <div>
+                                    <button id="back-to-careers-btn" class="text-[#B02828] hover:text-[#8F2020] font-medium">
+                                        <i class="fas fa-arrow-left mr-2"></i>Volver a Programas
+                                    </button>
+                                    <h3 id="courses-view-title" class="text-xl font-semibold text-gray-700 mt-2"></h3>
+                                </div>
+                                <button id="add-course-btn" class="bg-[#B02828] text-white px-4 py-2 rounded hover:bg-[#8F2020]">
+                                    <i class="fas fa-plus mr-2"></i>Añadir Unidad Didáctica
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr class="bg-gray-200 text-gray-600">
+                                            <th class="p-3">Código</th>
+                                            <th class="p-3">Unidad Didáctica</th>
+                                            <th class="p-3">Docente</th>
+                                            <th class="p-3">Créditos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="courses-table-body">
+                                        <!-- Rows will be inserted by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Grades Page -->
+                <section id="grades" class="page hidden">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center space-x-4 mb-6">
+                             <div>
+                                <label for="grade-career-select" class="block text-sm font-medium text-gray-700">Programa de Estudio:</label>
+                                <select id="grade-career-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#B02828] focus:border-[#B02828] sm:text-sm rounded-md">
+                                </select>
+                            </div>
+                            <div>
+                                <label for="grade-course-select" class="block text-sm font-medium text-gray-700">Unidad Didáctica:</label>
+                                <select id="grade-course-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#B02828] focus:border-[#B02828] sm:text-sm rounded-md">
+                                </select>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="bg-gray-200 text-gray-600">
+                                        <th class="p-3">ID Estudiante</th>
+                                        <th class="p-3">Nombre</th>
+                                        <th class="p-3" colspan="3">Calificaciones (Parciales)</th>
+                                        <th class="p-3">Promedio Final</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="grades-table-body">
+                                    <!-- Grades content here -->
+                                </tbody>
+                            </table>
+                             <div class="flex justify-end mt-4">
+                                <button id="save-grades-btn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                                    <i class="fas fa-save mr-2"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Calendar Page -->
+                <section id="calendar" class="page hidden">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                       <div id="calendar-container" class="w-full">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="flex items-center space-x-4">
+                                    <button id="prev-month" class="p-2 hover:bg-gray-100 rounded-full transition"><i class="fas fa-chevron-left text-[#B02828]"></i></button>
+                                    <h3 id="current-month-year" class="text-xl font-bold text-gray-800"></h3>
+                                    <button id="next-month" class="p-2 hover:bg-gray-100 rounded-full transition"><i class="fas fa-chevron-right text-[#B02828]"></i></button>
+                                </div>
+                                <button id="add-event-btn" class="bg-[#B02828] text-white px-4 py-2 rounded hover:bg-[#8F2020]">
+                                    <i class="fas fa-plus mr-2"></i>Añadir Evento
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-7 gap-1 text-center font-bold text-[#B02828] mb-2">
+                                <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
+                            </div>
+                            <div id="calendar-days" class="grid grid-cols-7 gap-2">
+                                <!-- Calendar days will be generated by JS -->
+                            </div>
+                       </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    <div id="add-student-modal" class="hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Añadir Nuevo Estudiante</h2>
+            <form id="add-student-form">
+                <div class="mb-4">
+                    <label for="student-name" class="block text-gray-700">Nombre Completo</label>
+                    <input type="text" id="student-name" class="w-full p-2 border border-gray-300 rounded mt-1" required>
+                </div>
+                 <div class="mb-4">
+                    <label for="student-career" class="block text-gray-700">Programa de Estudio</label>
+                    <select id="student-career" class="w-full p-2 border border-gray-300 rounded mt-1" required>
+                         <!-- Career options will be inserted by JavaScript -->
+                    </select>
+                </div>
+                 <div class="mb-6">
+                    <label for="student-entry-date" class="block text-gray-700">Fecha de Ingreso</label>
+                    <input type="date" id="student-entry-date" class="w-full p-2 border border-gray-300 rounded mt-1" required>
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-add-student" class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-[#B02828] text-white rounded hover:bg-[#8F2020]">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="add-course-modal" class="hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Añadir Nueva Unidad Didáctica</h2>
+            <form id="add-course-form">
+                <div class="mb-4">
+                    <label for="course-code" class="block text-gray-700">Código</label>
+                    <input type="text" id="course-code" class="w-full p-2 border border-gray-300 rounded mt-1" required placeholder="Ej: DSI-101">
+                </div>
+                <div class="mb-4">
+                    <label for="course-name" class="block text-gray-700">Nombre de la Unidad</label>
+                    <input type="text" id="course-name" class="w-full p-2 border border-gray-300 rounded mt-1" required>
+                </div>
+                <div class="mb-4">
+                    <label for="course-career" class="block text-gray-700">Programa de Estudio</label>
+                    <select id="course-career" class="w-full p-2 border border-gray-300 rounded mt-1" required readonly>
+                         <!-- Career options will be inserted by JavaScript -->
+                    </select>
+                </div>
+                 <div class="mb-4">
+                    <label for="course-teacher" class="block text-gray-700">Docente</label>
+                    <input type="text" id="course-teacher" class="w-full p-2 border border-gray-300 rounded mt-1" required>
+                </div>
+                 <div class="mb-6">
+                    <label for="course-credits" class="block text-gray-700">Créditos</label>
+                    <input type="number" id="course-credits" class="w-full p-2 border border-gray-300 rounded mt-1" required min="1" max="5">
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-add-course" class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-[#B02828] text-white rounded hover:bg-[#8F2020]">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="student-grades-modal" class="hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
+            <h2 id="student-grades-title" class="text-2xl font-bold mb-6 text-gray-800">Boleta de Calificaciones</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600">
+                            <th class="p-3">Unidad Didáctica</th>
+                            <th class="p-3">Parcial 1</th>
+                            <th class="p-3">Parcial 2</th>
+                            <th class="p-3">Parcial 3</th>
+                            <th class="p-3">Promedio Final</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-grades-table-body">
+                        <!-- Student grades will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+             <div class="flex justify-end mt-6">
+                <button type="button" id="close-student-grades-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Event Modal -->
+    <div id="add-event-modal" class="hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Añadir Nuevo Evento</h2>
+            <form id="add-event-form">
+                <div class="mb-4">
+                    <label for="event-title" class="block text-gray-700">Título del Evento</label>
+                    <input type="text" id="event-title" class="w-full p-2 border border-gray-300 rounded mt-1" required>
+                </div>
+                 <div class="mb-4">
+                    <label for="event-date" class="block text-gray-700">Fecha</label>
+                    <input type="date" id="event-date" class="w-full p-2 border border-gray-300 rounded mt-1" required>
+                </div>
+                 <div class="mb-6">
+                    <label for="event-type" class="block text-gray-700">Tipo de Evento</label>
+                    <select id="event-type" class="w-full p-2 border border-gray-300 rounded mt-1" required>
+                        <option value="bg-red-100 text-red-700">Examen</option>
+                        <option value="bg-yellow-100 text-yellow-700">Reunión</option>
+                        <option value="bg-green-100 text-green-700">Feriado/Institucional</option>
+                        <option value="bg-blue-100 text-blue-700">General</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-add-event" class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-[#B02828] text-white rounded hover:bg-[#8F2020]">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="save-toast">
+        <i class="fas fa-check-circle mr-2"></i>
+        <span id="toast-message"></span>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // === Login Logic ===
+    const loginScreen = document.getElementById('login-screen');
+    const appContainer = document.getElementById('app-container');
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        // Simple Validation (Prototype)
+        if (username === 'admin' && password === 'admin') {
+            // Success
+            loginError.classList.add('hidden');
+            loginScreen.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            initializeApp(); // Start app only after login
+        } else {
+            // Error
+            loginError.classList.remove('hidden');
+        }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        appContainer.classList.add('hidden');
+        loginScreen.classList.remove('hidden');
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+    });
+
+    // === App Logic (Original) ===
+    // Data for ISTP José María Arguedas
+    const careers = [
+        { id: 'CARR-01', name: 'Desarrollo de Sistemas de Información', icon: 'fa-laptop-code' },
+        { id: 'CARR-02', name: 'Enfermería Técnica', icon: 'fa-user-nurse' },
+        { id: 'CARR-03', name: 'Producción Agropecuaria', icon: 'fa-tractor' },
+        { id: 'CARR-04', name: 'Contabilidad', icon: 'fa-calculator' },
+        { id: 'CARR-05', name: 'Mecatrónica Automotriz', icon: 'fa-car-battery' },
+        { id: 'CARR-06', name: 'Guía Oficial de Turismo', icon: 'fa-map-signs' },
+        { id: 'CARR-07', name: 'Administración de Empresas', icon: 'fa-briefcase' }
+    ];
+
+    let students = [
+        { id: 'S001', name: 'Juan Quispe Rojas', entryDate: '2023-03-15', status: 'Activo', careerId: 'CARR-01' },
+        { id: 'S002', name: 'María Mamani Flores', entryDate: '2022-03-15', status: 'Activo', careerId: 'CARR-02' },
+        { id: 'S003', name: 'Carlos Mendoza Yauri', entryDate: '2023-03-15', status: 'Activo', careerId: 'CARR-01' },
+        { id: 'S004', name: 'Ana Condor Pérez', entryDate: '2024-03-15', status: 'Activo', careerId: 'CARR-04' },
+        { id: 'S005', name: 'Luis Huamán Soto', entryDate: '2022-03-15', status: 'Inactivo', careerId: 'CARR-03' }
+    ];
+    let courses = [
+        { code: 'DSI-101', name: 'Análisis y Diseño de Sistemas', teacher: 'Ing. Guido van Rossum', credits: 4, careerId: 'CARR-01' },
+        { code: 'DSI-102', name: 'Base de Datos', teacher: 'Ing. Edgar Codd', credits: 4, careerId: 'CARR-01' },
+        { code: 'ENF-101', name: 'Anatomía Humana', teacher: 'Lic. Florence Nightingale', credits: 3, careerId: 'CARR-02' },
+        { code: 'CON-101', name: 'Contabilidad General', teacher: 'CPC. Luca Pacioli', credits: 4, careerId: 'CARR-04' }
+    ];
+    let studentGrades = {
+        'S001': [
+            { courseCode: 'DSI-101', name: 'Análisis y Diseño de Sistemas', grades: [18, 17, 19], final: 18.0 },
+            { courseCode: 'DSI-102', name: 'Base de Datos', grades: [16, 15, 17], final: 16.0 }
+        ],
+        'S002': [
+            { courseCode: 'ENF-101', name: 'Anatomía Humana', grades: [17, 18, 18], final: 17.7 }
+        ],
+        'S003': [
+             { courseCode: 'DSI-101', name: 'Análisis y Diseño de Sistemas', grades: [19, 20, 18], final: 19.0 }
+        ],
+        'S004': [
+            { courseCode: 'CON-101', name: 'Contabilidad General', grades: [12, 10, 11], final: 11.0 }
+        ]
+    };
+
+    let selectedCareerId = null;
+
+    const navLinks = document.querySelectorAll('.nav-link');
+    const pages = document.querySelectorAll('.page');
+    const pageTitle = document.getElementById('page-title');
+
+    function showPage(hash) {
+        const targetId = hash.substring(1);
+        let activeLinkTitle = 'Panel de Control';
+        
+        pages.forEach(page => page.classList.toggle('hidden', page.id !== targetId));
+
+        navLinks.forEach(link => {
+            if (link.getAttribute('href') === hash) {
+                link.classList.add('bg-[#8F2020]');
+                activeLinkTitle = link.innerText;
+            } else {
+                link.classList.remove('bg-[#8F2020]');
+            }
+        });
+
+        pageTitle.innerText = activeLinkTitle;
+    }
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.hash = e.currentTarget.getAttribute('href');
+        });
+    });
+
+    window.addEventListener('hashchange', () => showPage(window.location.hash || '#dashboard'));
+
+    const menuButton = document.getElementById('menu-button');
+    const sidebar = document.getElementById('sidebar');
+    
+    menuButton.addEventListener('click', () => sidebar.classList.toggle('sidebar-closed'));
+    
+    const studentsTableBody = document.getElementById('students-table-body');
+    const studentSearch = document.getElementById('student-search');
+
+    function renderStudents(studentList) {
+        studentsTableBody.innerHTML = '';
+        studentList.forEach(student => {
+            const studentCareer = careers.find(c => c.id === student.careerId);
+            const statusColor = student.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+            const row = `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-3">${student.id}</td>
+                    <td class="p-3 font-medium text-gray-900">${student.name}</td>
+                    <td class="p-3">${studentCareer ? studentCareer.name : 'N/A'}</td>
+                    <td class="p-3">${student.entryDate}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 font-semibold leading-tight text-sm rounded-full ${statusColor}">
+                            ${student.status}
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        <button class="view-grades-btn text-[#B02828] hover:text-[#8F2020] font-medium" data-student-id="${student.id}">
+                            <i class="fas fa-eye mr-1"></i>Ver Notas
+                        </button>
+                    </td>
+                </tr>`;
+            studentsTableBody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+
+    studentSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredStudents = students.filter(s => s.name.toLowerCase().includes(searchTerm));
+        renderStudents(filteredStudents);
+    });
+
+    studentsTableBody.addEventListener('click', (e) => {
+        const target = e.target.closest('.view-grades-btn');
+        if (target) {
+            showStudentGradesModal(target.dataset.studentId);
+        }
+    });
+
+    const addStudentModal = document.getElementById('add-student-modal');
+    const addStudentBtn = document.getElementById('add-student-btn');
+    const cancelAddStudentBtn = document.getElementById('cancel-add-student');
+    const addStudentForm = document.getElementById('add-student-form');
+
+    addStudentBtn.addEventListener('click', () => addStudentModal.classList.remove('hidden'));
+    cancelAddStudentBtn.addEventListener('click', () => addStudentModal.classList.add('hidden'));
+
+    addStudentForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newId = 'S' + String(students.length + 1).padStart(3, '0');
+        const newStudent = {
+            id: newId,
+            name: document.getElementById('student-name').value,
+            careerId: document.getElementById('student-career').value,
+            entryDate: document.getElementById('student-entry-date').value,
+            status: 'Activo'
+        };
+        students.push(newStudent);
+        renderStudents(students);
+        updateDashboardStats();
+        addStudentModal.classList.add('hidden');
+        addStudentForm.reset();
+    });
+    
+    const addCourseModal = document.getElementById('add-course-modal');
+    const addCourseBtn = document.getElementById('add-course-btn');
+    const cancelAddCourseBtn = document.getElementById('cancel-add-course');
+    const addCourseForm = document.getElementById('add-course-form');
+
+    addCourseBtn.addEventListener('click', () => {
+        const courseCareerSelect = document.getElementById('course-career');
+        courseCareerSelect.value = selectedCareerId;
+        addCourseModal.classList.remove('hidden');
+    });
+    cancelAddCourseBtn.addEventListener('click', () => addCourseModal.classList.add('hidden'));
+
+    addCourseForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newCourse = {
+            code: document.getElementById('course-code').value,
+            name: document.getElementById('course-name').value,
+            teacher: document.getElementById('course-teacher').value,
+            credits: parseInt(document.getElementById('course-credits').value),
+            careerId: document.getElementById('course-career').value
+        };
+        courses.push(newCourse);
+        renderCourses(newCourse.careerId);
+        updateDashboardStats();
+        addCourseModal.classList.add('hidden');
+        addCourseForm.reset();
+    });
+
+    const careersView = document.getElementById('careers-view');
+    const coursesView = document.getElementById('courses-view');
+    const careersGrid = document.getElementById('careers-grid');
+    const coursesTableBody = document.getElementById('courses-table-body');
+    const backToCareersBtn = document.getElementById('back-to-careers-btn');
+    const coursesViewTitle = document.getElementById('courses-view-title');
+
+    function renderCareers() {
+        careersGrid.innerHTML = '';
+        careers.forEach(career => {
+            const card = `
+                <div class="career-card bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer" data-career-id="${career.id}">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-[#B02828] text-white">
+                           <i class="fas ${career.icon} fa-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h4 class="text-xl font-bold text-gray-800">${career.name}</h4>
+                        </div>
+                    </div>
+                </div>`;
+            careersGrid.insertAdjacentHTML('beforeend', card);
+        });
+    }
+
+    careersGrid.addEventListener('click', (e) => {
+        const card = e.target.closest('.career-card');
+        if (card) {
+            selectedCareerId = card.dataset.careerId;
+            const career = careers.find(c => c.id === selectedCareerId);
+            coursesViewTitle.innerText = `Unidades Didácticas de ${career.name}`;
+            renderCourses(selectedCareerId);
+            careersView.classList.add('hidden');
+            coursesView.classList.remove('hidden');
+        }
+    });
+
+    backToCareersBtn.addEventListener('click', () => {
+        careersView.classList.remove('hidden');
+        coursesView.classList.add('hidden');
+        selectedCareerId = null;
+    });
+
+    function renderCourses(careerId) {
+        coursesTableBody.innerHTML = '';
+        const filteredCourses = courses.filter(c => c.careerId === careerId);
+        if (filteredCourses.length === 0) {
+            coursesTableBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No hay unidades didácticas para este programa.</td></tr>';
+            return;
+        }
+        filteredCourses.forEach(course => {
+            const row = `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-3">${course.code}</td>
+                    <td class="p-3 font-medium text-gray-900">${course.name}</td>
+                    <td class="p-3">${course.teacher}</td>
+                    <td class="p-3">${course.credits}</td>
+                </tr>`;
+            coursesTableBody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+    
+    const gradeCareerSelect = document.getElementById('grade-career-select');
+    const gradeCourseSelect = document.getElementById('grade-course-select');
+    const gradesTableBody = document.getElementById('grades-table-body');
+    const saveGradesBtn = document.getElementById('save-grades-btn');
+
+    function populateCareerSelects() {
+        const selects = [
+            document.getElementById('student-career'),
+            document.getElementById('course-career'),
+            gradeCareerSelect
+        ];
+        
+        selects.forEach(select => {
+            select.innerHTML = `<option value="">-- Seleccione --</option>`;
+            careers.forEach(career => {
+                const option = `<option value="${career.id}">${career.name}</option>`;
+                select.insertAdjacentHTML('beforeend', option);
+            });
+        });
+    }
+
+    function populateGradeCourseSelect(careerId) {
+        gradeCourseSelect.innerHTML = '<option value="">-- Seleccione --</option>';
+        if (!careerId) return;
+        
+        courses.filter(c => c.careerId === careerId).forEach(course => {
+            gradeCourseSelect.insertAdjacentHTML('beforeend', `<option value="${course.code}">${course.name}</option>`);
+        });
+    }
+    
+    function renderGradesForCourse(courseCode) {
+        gradesTableBody.innerHTML = '';
+        if (!courseCode) {
+            gradesTableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">Seleccione un programa y unidad didáctica.</td></tr>';
+            return;
+        }
+
+        const course = courses.find(c => c.code === courseCode);
+        const studentsInCareer = students.filter(s => s.careerId === course.careerId && s.status === 'Activo');
+
+        if (studentsInCareer.length === 0) {
+             gradesTableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">No hay estudiantes activos en este programa.</td></tr>';
+            return;
+        }
+
+        studentsInCareer.forEach(student => {
+             const gradeRecord = studentGrades[student.id]?.find(g => g.courseCode === courseCode);
+             const [p1, p2, p3] = gradeRecord ? gradeRecord.grades : ['', '', ''];
+             const final = gradeRecord ? gradeRecord.final.toFixed(1) : 'N/A';
+
+            const row = `
+                <tr class="border-b hover:bg-gray-50" data-student-id="${student.id}">
+                    <td class="p-3">${student.id}</td>
+                    <td class="p-3 font-medium text-gray-900">${student.name}</td>
+                    <td class="p-3"><input type="number" class="w-20 p-1 border rounded grade-input" value="${p1}" min="0" max="20"></td>
+                    <td class="p-3"><input type="number" class="w-20 p-1 border rounded grade-input" value="${p2}" min="0" max="20"></td>
+                    <td class="p-3"><input type="number" class="w-20 p-1 border rounded grade-input" value="${p3}" min="0" max="20"></td>
+                    <td class="p-3 font-bold text-gray-800 final-grade">${final}</td>
+                </tr>`;
+            gradesTableBody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+    
+    gradeCareerSelect.addEventListener('change', (e) => {
+        populateGradeCourseSelect(e.target.value);
+        renderGradesForCourse(null);
+    });
+    
+    gradeCourseSelect.addEventListener('change', (e) => renderGradesForCourse(e.target.value));
+
+    saveGradesBtn.addEventListener('click', () => {
+        const courseCode = gradeCourseSelect.value;
+        if (!courseCode) {
+            showToast("Por favor, seleccione un curso primero.", true);
+            return;
+        }
+        
+        gradesTableBody.querySelectorAll('tr').forEach(row => {
+            const studentId = row.dataset.studentId;
+            if (!studentId) return;
+
+            const inputs = row.querySelectorAll('.grade-input');
+            const newGrades = Array.from(inputs).map(input => parseFloat(input.value) || 0);
+            
+            if (!studentGrades[studentId]) studentGrades[studentId] = [];
+            
+            let gradeRecord = studentGrades[studentId].find(g => g.courseCode === courseCode);
+            
+            if (!gradeRecord) {
+                const courseInfo = courses.find(c => c.code === courseCode);
+                gradeRecord = { courseCode: courseCode, name: courseInfo.name, grades: [0,0,0], final: 0 };
+                studentGrades[studentId].push(gradeRecord);
+            }
+            
+            gradeRecord.grades = newGrades;
+            const newFinal = newGrades.reduce((a, b) => a + b, 0) / 3;
+            gradeRecord.final = newFinal;
+            
+            row.querySelector('.final-grade').innerText = newFinal.toFixed(1);
+        });
+        showToast("Calificaciones guardadas exitosamente.");
+    });
+
+    const studentGradesModal = document.getElementById('student-grades-modal');
+    const studentGradesTitle = document.getElementById('student-grades-title');
+    const studentGradesTableBody = document.getElementById('student-grades-table-body');
+    const closeStudentGradesBtn = document.getElementById('close-student-grades-btn');
+
+    function showStudentGradesModal(studentId) {
+        const student = students.find(s => s.id === studentId);
+        const grades = studentGrades[studentId] || [];
+        
+        studentGradesTitle.innerText = `Calificaciones de: ${student.name}`;
+        studentGradesTableBody.innerHTML = '';
+        
+        if (grades.length === 0) {
+            studentGradesTableBody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">No hay calificaciones registradas.</td></tr>';
+        } else {
+            grades.forEach(grade => {
+                const row = `
+                    <tr class="border-b">
+                        <td class="p-3 font-medium">${grade.name}</td>
+                        <td class="p-3">${grade.grades[0]}</td>
+                        <td class="p-3">${grade.grades[1]}</td>
+                        <td class="p-3">${grade.grades[2]}</td>
+                        <td class="p-3 font-bold text-gray-800">${grade.final.toFixed(1)}</td>
+                    </tr>`;
+                studentGradesTableBody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+        studentGradesModal.classList.remove('hidden');
+    }
+    
+    closeStudentGradesBtn.addEventListener('click', () => studentGradesModal.classList.add('hidden'));
+
+    function updateDashboardStats() {
+        document.getElementById('total-students-stat').innerText = students.length;
+        document.getElementById('total-courses-stat').innerText = courses.length;
+    }
+
+    let performanceChartInstance, distributionChartInstance;
+    function setupCharts() {
+        if(performanceChartInstance) performanceChartInstance.destroy();
+        if(distributionChartInstance) distributionChartInstance.destroy();
+
+        const perfCtx = document.getElementById('performanceChart').getContext('2d');
+        const performanceData = careers.map(career => {
+            const studentsInCareer = students.filter(s => s.careerId === career.id);
+            if (studentsInCareer.length === 0) return { career: career.name, avg: 0 };
+            
+            let totalGrade = 0, gradeCount = 0;
+            studentsInCareer.forEach(s => {
+                (studentGrades[s.id] || []).forEach(g => {
+                    totalGrade += g.final;
+                    gradeCount++;
+                });
+            });
+            return { career: career.name, avg: gradeCount > 0 ? totalGrade / gradeCount : 0 };
+        });
+
+        performanceChartInstance = new Chart(perfCtx, {
+            type: 'bar',
+            data: {
+                labels: performanceData.map(d => d.career),
+                datasets: [{
+                    label: 'Promedio General por Carrera',
+                    data: performanceData.map(d => d.avg.toFixed(2)),
+                    backgroundColor: 'rgba(176, 40, 40, 0.6)',
+                    borderColor: 'rgba(176, 40, 40, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true, max: 20 } } }
+        });
+
+        const distCtx = document.getElementById('distributionChart').getContext('2d');
+        const careerCounts = students.reduce((acc, student) => {
+            const career = careers.find(c => c.id === student.careerId);
+            if (career) acc[career.name] = (acc[career.name] || 0) + 1;
+            return acc;
+        }, {});
+        distributionChartInstance = new Chart(distCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(careerCounts),
+                datasets: [{
+                    data: Object.values(careerCounts),
+                    backgroundColor: ['#B02828', '#8F2020', '#C53030', '#E53E3E', '#FC8181', '#FEB2B2', '#E2E8F0']
+                }]
+            }
+        });
+    }
+    
+    // Calendar Logic (Dynamic)
+    let currentDate = new Date();
+    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    // Mock events
+    const events = [
+        { date: '2025-09-04', title: 'Exámenes', color: 'bg-red-100 text-red-700' },
+        { date: '2025-09-15', title: 'Reunión', color: 'bg-yellow-100 text-yellow-700' },
+        { date: '2025-09-25', title: 'Día Feriado', color: 'bg-green-100 text-green-700' }
+    ];
+
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        document.getElementById('current-month-year').innerText = `${monthNames[month]} ${year}`;
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        const calendarDays = document.getElementById('calendar-days');
+        calendarDays.innerHTML = '';
+
+        // Previous month days
+        for (let i = firstDay; i > 0; i--) {
+            calendarDays.innerHTML += `<div class="border rounded p-2 h-24 text-gray-400 bg-gray-50">${daysInPrevMonth - i + 1}</div>`;
+        }
+
+        // Current month days
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            const event = events.find(e => e.date === dateStr);
+            let eventHtml = '';
+            let cellClass = '';
+            
+            if (event) {
+                cellClass = event.color;
+                eventHtml = `<span class="text-xs block absolute bottom-1 left-1 font-semibold truncate w-full px-1">${event.title}</span>`;
+            }
+
+            // Check if it's today
+            const now = new Date();
+            const isToday = (i === now.getDate() && month === now.getMonth() && year === now.getFullYear()) ? 'border-[#B02828] border-2' : 'border';
+
+            calendarDays.innerHTML += `
+                <div class="${isToday} rounded p-2 h-24 relative ${cellClass} hover:bg-gray-50 transition cursor-pointer">
+                    <span class="font-bold text-gray-700">${i}</span>
+                    ${eventHtml}
+                </div>`;
+        }
+    }
+
+    document.getElementById('prev-month').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    document.getElementById('next-month').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+
+    // Add Event Modal Logic
+    const addEventModal = document.getElementById('add-event-modal');
+    const addEventBtn = document.getElementById('add-event-btn');
+    const cancelAddEventBtn = document.getElementById('cancel-add-event');
+    const addEventForm = document.getElementById('add-event-form');
+
+    addEventBtn.addEventListener('click', () => addEventModal.classList.remove('hidden'));
+    cancelAddEventBtn.addEventListener('click', () => addEventModal.classList.add('hidden'));
+
+    addEventForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newEvent = {
+            title: document.getElementById('event-title').value,
+            date: document.getElementById('event-date').value,
+            color: document.getElementById('event-type').value
+        };
+        events.push(newEvent);
+        renderCalendar();
+        showToast("Evento añadido exitosamente.");
+        addEventModal.classList.add('hidden');
+        addEventForm.reset();
+    });
+    
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('save-toast');
+        toast.querySelector('#toast-message').innerText = message;
+        toast.style.backgroundColor = isError ? '#dc3545' : '#28a745';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function initializeApp() {
+        showPage(window.location.hash || '#dashboard');
+        updateDashboardStats();
+        renderStudents(students);
+        renderCareers();
+        populateCareerSelects();
+        renderGradesForCourse(null);
+        setupCharts();
+        renderCalendar(); // Init calendar
+    }
+    
+    // NOTE: In this version with Login, we do NOT call initializeApp() immediately.
+    // It's called inside the login form submit handler.
+});
+</script>
+
+</body>
+</html>
