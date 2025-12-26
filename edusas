@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión - Colegio KERNEL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .sidebar { transition: transform 0.3s ease-in-out; width: 280px; }
+        .main-content { transition: margin-left 0.3s ease-in-out; }
+        .sidebar-closed { transform: translateX(-100%); }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d97706; }
+
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.7); z-index: 40; backdrop-filter: blur(3px);
+        }
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 50; max-height: 90vh; overflow-y: auto;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translate(-50%, -45%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        #save-toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background-color: #0f172a; color: #fbbf24;
+            padding: 1rem 1.5rem; border-radius: 0.5rem;
+            z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-left: 4px solid #d97706;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            opacity: 0; transform: translateY(100%);
+            display: flex; align-items: center; font-weight: 600;
+        }
+        #save-toast.show { opacity: 1; transform: translateY(0); }
+        
+        .login-bg {
+            background-image: linear-gradient(rgba(15, 23, 42, 0.9), rgba(0, 0, 0, 0.85)), url('https://jma.edu.pe/img/locales/sede_principal_sicaya_3.JPG');
+            background-size: cover; background-position: center;
+        }
+        
+        .nota-aprobatoria { color: #2563eb; font-weight: 600; }
+        .nota-desaprobatoria { color: #dc2626; font-weight: 700; }
+        .nav-active { background-color: #1e293b !important; border-left: 4px solid #fbbf24; color: #fbbf24 !important; }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-800">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="fixed inset-0 login-bg flex items-center justify-center z-50">
+        <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-md mx-4 transform transition-all hover:scale-105 duration-300 border-t-4 border-amber-500">
+            <div class="text-center mb-8">
+                <div class="w-32 h-32 mx-auto mb-4 bg-white rounded-full p-2 shadow-lg flex items-center justify-center border border-slate-200">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDuGheCrgzXXWRDyUTA6kNQ3v5cv4tOATSZw&s" alt="Logo" class="object-contain h-full w-full rounded-full">
+                </div>
+                <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">COLEGIO KERNEL</h2>
+                <p class="text-amber-600 font-semibold mt-1">Plataforma de Gestión Escolar v3.0</p>
+            </div>
+            
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Usuario Institucional</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fas fa-user"></i></span>
+                        <input type="text" id="username" class="w-full pl-10 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-slate-50" placeholder="admin" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Contraseña</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fas fa-lock"></i></span>
+                        <input type="password" id="password" class="w-full pl-10 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-slate-50" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div id="login-error" class="text-red-500 text-sm text-center hidden bg-red-50 p-2 rounded border border-red-200">
+                    <i class="fas fa-exclamation-circle mr-1"></i> Credenciales incorrectas
+                </div>
+                <button type="submit" class="w-full py-3 px-4 bg-slate-900 text-white font-bold rounded-lg shadow-md hover:bg-slate-800 transform transition hover:-translate-y-0.5 border border-slate-700">
+                    ACCEDER AL SISTEMA
+                </button>
+            </form>
+            <div class="mt-8 text-center text-xs text-slate-400">
+                &copy; 2025 Colegio KERNEL - Sistema de Gestión<br>Tecnología Educativa Avanzada
+            </div>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-container" class="flex h-screen hidden overflow-hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar bg-slate-900 text-slate-300 flex flex-col h-full shadow-2xl z-20 border-r border-slate-800">
+            <div class="p-6 flex flex-col items-center border-b border-slate-800 bg-slate-950">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDuGheCrgzXXWRDyUTA6kNQ3v5cv4tOATSZw&s" alt="Logo" class="w-20 h-20 rounded-full bg-white p-1 mb-3 shadow-lg object-cover">
+                <h1 class="text-xl font-bold tracking-wider text-white text-center leading-tight">COLEGIO<br>KERNEL</h1>
+                <span class="text-xs text-amber-500 uppercase tracking-widest font-semibold mt-1">Excelencia Educativa</span>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+                <a href="#dashboard" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fas fa-chart-line w-6 text-center mr-3"></i> <span class="font-medium">Panel de Control</span>
+                </a>
+                
+                <div class="px-6 pt-4 pb-2 text-xs uppercase text-slate-500 font-bold tracking-wider">Gestión Académica</div>
+                
+                <a href="#students" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fas fa-user-graduate w-6 text-center mr-3"></i> <span class="font-medium">Estudiantes</span>
+                </a>
+                <a href="#teachers" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fas fa-chalkboard-teacher w-6 text-center mr-3"></i> <span class="font-medium">Plana Docente</span>
+                </a>
+                <a href="#courses" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fas fa-book w-6 text-center mr-3"></i> <span class="font-medium">Áreas Curriculares</span>
+                </a>
+
+                <div class="px-6 pt-4 pb-2 text-xs uppercase text-slate-500 font-bold tracking-wider">Evaluación</div>
+
+                <a href="#attendance" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fas fa-calendar-check w-6 text-center mr-3"></i> <span class="font-medium">Asistencia</span>
+                </a>
+                <a href="#grades" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fas fa-marker w-6 text-center mr-3"></i> <span class="font-medium">Registro de Notas</span>
+                </a>
+                <a href="#reports" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fas fa-print w-6 text-center mr-3"></i> <span class="font-medium">Libretas</span>
+                </a>
+
+                <div class="px-6 pt-4 pb-2 text-xs uppercase text-slate-500 font-bold tracking-wider">Institucional</div>
+
+                <a href="#calendar" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors">
+                    <i class="fas fa-calendar-alt w-6 text-center mr-3"></i> <span class="font-medium">Agenda Escolar</span>
+                </a>
+            </nav>
+            
+            <div class="p-4 bg-slate-950 text-xs text-center text-slate-500 border-t border-slate-900">
+                &copy; 2025 KERNEL v3.0
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 w-full relative">
+            <header class="bg-white shadow-sm z-10 h-16 flex items-center justify-between px-6 border-b border-slate-200">
+                <div class="flex items-center">
+                    <button id="menu-button" class="text-slate-600 hover:text-slate-900 focus:outline-none lg:hidden mr-4">
+                        <i class="fas fa-bars fa-lg"></i>
+                    </button>
+                    <h2 id="page-title" class="text-2xl font-bold text-slate-800">Panel de Control</h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-bold text-slate-800">Administrador</p>
+                        <p class="text-xs text-amber-600 font-semibold">● En línea</p>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=0f172a&color=fff" class="h-10 w-10 rounded-full border-2 border-slate-200 shadow-sm" alt="User">
+                    <button id="logout-btn" class="text-slate-400 hover:text-red-600 transition-colors p-2" title="Cerrar Sesión">
+                        <i class="fas fa-power-off fa-lg"></i>
+                    </button>
+                </div>
+            </header>
+
+            <main id="main-scroll" class="flex-1 overflow-x-hidden overflow-y-auto p-6 scroll-smooth">
+                <!-- Dashboard -->
+                <section id="dashboard" class="page space-y-6">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-slate-800 flex items-center hover:shadow-md transition">
+                            <div class="p-3 rounded-full bg-slate-100 text-slate-800 mr-4"><i class="fas fa-user-graduate fa-2x"></i></div>
+                            <div>
+                                <p class="text-slate-500 text-sm font-medium uppercase">Estudiantes</p>
+                                <p id="dash-total-students" class="text-3xl font-bold text-slate-900">0</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-amber-500 flex items-center hover:shadow-md transition">
+                            <div class="p-3 rounded-full bg-amber-50 text-amber-600 mr-4"><i class="fas fa-chalkboard-teacher fa-2x"></i></div>
+                            <div>
+                                <p class="text-slate-500 text-sm font-medium uppercase">Plana Docente</p>
+                                <p id="dash-total-teachers" class="text-3xl font-bold text-slate-900">0</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-gray-600 flex items-center hover:shadow-md transition">
+                            <div class="p-3 rounded-full bg-gray-100 text-gray-700 mr-4"><i class="fas fa-book-reader fa-2x"></i></div>
+                            <div>
+                                <p class="text-slate-500 text-sm font-medium uppercase">Áreas</p>
+                                <p id="dash-total-courses" class="text-3xl font-bold text-slate-900">0</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-emerald-600 flex items-center hover:shadow-md transition">
+                            <div class="p-3 rounded-full bg-emerald-50 text-emerald-600 mr-4"><i class="fas fa-calendar-alt fa-2x"></i></div>
+                            <div>
+                                <p class="text-slate-500 text-sm font-medium uppercase">Actividades</p>
+                                <p id="dash-total-events" class="text-3xl font-bold text-slate-900">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Area -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Rendimiento Académico</h3>
+                            <canvas id="performanceChart" height="200"></canvas>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Distribución Estudiantil</h3>
+                            <canvas id="distributionChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Students Module -->
+                <section id="students" class="page hidden">
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                        <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div class="w-full md:w-1/3 relative">
+                                <i class="fas fa-search absolute left-3 top-3 text-slate-400"></i>
+                                <input type="text" id="student-search" placeholder="Buscar por DNI o Apellidos..." class="w-full pl-10 p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition outline-none">
+                            </div>
+                            <button onclick="openModal('add-student-modal')" class="bg-slate-900 text-white px-5 py-2.5 rounded-lg hover:bg-slate-800 transition shadow-md flex items-center border border-slate-700">
+                                <i class="fas fa-plus-circle mr-2 text-amber-400"></i> Nueva Matrícula
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 text-slate-600 uppercase text-xs font-bold">
+                                    <tr>
+                                        <th class="p-4 border-b border-slate-200">DNI</th>
+                                        <th class="p-4 border-b border-slate-200">Apellidos y Nombres</th>
+                                        <th class="p-4 border-b border-slate-200 text-center">Grado</th>
+                                        <th class="p-4 border-b border-slate-200 text-center">Fecha Matrícula</th>
+                                        <th class="p-4 border-b border-slate-200 text-center">Estado</th>
+                                        <th class="p-4 border-b border-slate-200 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-table-body" class="text-sm divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div class="p-4 text-center text-slate-400 text-sm" id="no-students-msg">No hay estudiantes registrados.</div>
+                    </div>
+                </section>
+
+                <!-- Teachers Module -->
+                <section id="teachers" class="page hidden">
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                            <h3 class="text-xl font-bold text-slate-800">Plana Docente</h3>
+                            <button onclick="openModal('add-teacher-modal')" class="bg-amber-600 text-white px-5 py-2.5 rounded-lg hover:bg-amber-700 transition shadow-md">
+                                <i class="fas fa-user-plus mr-2"></i> Registrar Docente
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6" id="teachers-grid">
+                            <!-- Teachers Cards -->
+                        </div>
+                    </div>
+                </section>
+                <!-- Courses Module -->
+                <section id="courses" class="page hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6 border border-slate-200">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-slate-800">Gestión de Áreas Curriculares</h3>
+                            <button onclick="openModal('add-course-modal')" class="bg-slate-800 text-white px-5 py-2.5 rounded-lg hover:bg-slate-700 transition shadow-md">
+                                <i class="fas fa-book-open mr-2 text-amber-400"></i> Crear Área
+                            </button>
+                        </div>
+                        <div class="mb-4">
+                            <label class="font-semibold text-slate-600 mr-2">Filtrar por Grado:</label>
+                            <select id="course-filter-grade" class="p-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-amber-500 outline-none">
+                                <option value="all">Todos los Grados</option>
+                            </select>
+                        </div>
+                        <div class="overflow-x-auto rounded-lg border border-slate-200">
+                            <table class="w-full text-left bg-white">
+                                <thead class="bg-slate-100 text-slate-700 font-semibold text-sm">
+                                    <tr>
+                                        <th class="p-3 border-b">Grado</th>
+                                        <th class="p-3 border-b">Código</th>
+                                        <th class="p-3 border-b">Área Curricular</th>
+                                        <th class="p-3 border-b">Docente Responsable</th>
+                                        <th class="p-3 border-b text-center">Horas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="courses-table-body" class="text-sm divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Grades Module -->
+                <section id="grades" class="page hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <div class="flex flex-wrap gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200 items-end">
+                            <div class="flex-1 min-w-[200px]">
+                                <label class="block text-xs font-bold text-slate-600 uppercase mb-1">1. Seleccionar Grado</label>
+                                <select id="grade-select-grade" class="w-full p-2.5 border border-slate-300 rounded bg-white focus:ring-2 focus:ring-amber-500 outline-none"></select>
+                            </div>
+                            <div class="flex-1 min-w-[200px]">
+                                <label class="block text-xs font-bold text-slate-600 uppercase mb-1">2. Seleccionar Área</label>
+                                <select id="grade-select-course" class="w-full p-2.5 border border-slate-300 rounded bg-white focus:ring-2 focus:ring-amber-500 outline-none" disabled>
+                                    <option>-- Primero seleccione grado --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <button id="load-grades-btn" class="px-6 py-2.5 bg-slate-800 text-white font-bold rounded shadow hover:bg-slate-700 transition">
+                                    <i class="fas fa-sync-alt mr-2 text-amber-400"></i> Cargar Registro
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="grades-container" class="hidden">
+                            <div class="overflow-x-auto rounded-lg border border-slate-300">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-slate-900 text-white">
+                                        <tr>
+                                            <th class="p-3 text-left w-16 border-r border-slate-700">N°</th>
+                                            <th class="p-3 text-left border-r border-slate-700">Estudiante</th>
+                                            <th class="p-3 text-center w-20 border-r border-slate-700 bg-slate-800">I Bim</th>
+                                            <th class="p-3 text-center w-20 border-r border-slate-700 bg-slate-800">II Bim</th>
+                                            <th class="p-3 text-center w-20 border-r border-slate-700 bg-slate-800">III Bim</th>
+                                            <th class="p-3 text-center w-20 border-r border-slate-700 bg-slate-800">IV Bim</th>
+                                            <th class="p-3 text-center w-24 font-bold bg-amber-600 text-white">PROMEDIO</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="grades-table-body" class="bg-white divide-y"></tbody>
+                                </table>
+                            </div>
+                            <div class="mt-4 flex justify-end">
+                                <button onclick="saveAllGrades()" class="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 shadow-lg font-bold flex items-center transition transform hover:scale-105">
+                                    <i class="fas fa-save mr-2"></i> Guardar Registro de Notas
+                                </button>
+                            </div>
+                        </div>
+                        <div id="grades-placeholder" class="text-center py-10 text-slate-400 border-2 border-dashed border-slate-300 rounded-lg">
+                            <i class="fas fa-arrow-up text-4xl mb-2 text-slate-300"></i>
+                            <p>Seleccione los criterios y cargue el registro para comenzar.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Attendance Module -->
+                <section id="attendance" class="page hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <div class="flex flex-wrap gap-4 mb-6 items-end">
+                            <div class="flex-1">
+                                <label class="block text-sm font-bold text-slate-700">Grado:</label>
+                                <select id="att-grade-select" class="w-full p-2.5 border border-slate-300 rounded mt-1 focus:ring-amber-500 outline-none"></select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-sm font-bold text-slate-700">Fecha:</label>
+                                <input type="date" id="att-date" class="w-full p-2.5 border border-slate-300 rounded mt-1 focus:ring-amber-500 outline-none">
+                            </div>
+                            <button id="load-att-btn" class="bg-blue-600 text-white px-6 py-2.5 rounded hover:bg-blue-700 font-bold shadow">
+                                Tomar Asistencia
+                            </button>
+                        </div>
+                        
+                        <div id="att-container" class="hidden">
+                            <table class="w-full text-sm border-collapse border border-slate-200">
+                                <thead>
+                                    <tr class="bg-slate-100 border-b-2 border-slate-200">
+                                        <th class="p-3 text-left">Estudiante</th>
+                                        <th class="p-3 text-center w-24 text-emerald-700 bg-emerald-50 border-l border-emerald-100">Presente</th>
+                                        <th class="p-3 text-center w-24 text-amber-700 bg-amber-50 border-l border-amber-100">Tardanza</th>
+                                        <th class="p-3 text-center w-24 text-red-700 bg-red-50 border-l border-red-100">Falta</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="att-table-body" class="bg-white divide-y"></tbody>
+                            </table>
+                            <div class="mt-4 text-right">
+                                <button onclick="saveAttendance()" class="bg-emerald-600 text-white px-6 py-2.5 rounded font-bold hover:bg-emerald-700 shadow">
+                                    Guardar Asistencia
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reports Module -->
+                <section id="reports" class="page hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-8 text-center border border-slate-200">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-6">Emisión de Documentos Oficiales</h2>
+                        <div class="max-w-xl mx-auto flex gap-2">
+                            <input type="text" id="report-search-dni" placeholder="Ingrese DNI del estudiante..." class="flex-1 p-3 border-2 border-slate-300 rounded-lg focus:border-amber-500 outline-none text-lg">
+                            <button onclick="searchForReport()" class="bg-slate-900 text-white px-6 py-3 rounded-lg font-bold hover:bg-slate-800 shadow">
+                                <i class="fas fa-search text-amber-400"></i> Buscar
+                            </button>
+                        </div>
+                        <div id="report-preview" class="mt-8 hidden animate-fade-in-up">
+                            <div class="inline-block p-6 border rounded-lg bg-slate-50 text-left shadow-md border-slate-200">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-700 mr-4 shadow-sm">
+                                        <i class="fas fa-user-graduate fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg text-slate-800" id="rep-name">Nombre Alumno</h4>
+                                        <p class="text-slate-500" id="rep-grade">Grado</p>
+                                    </div>
+                                </div>
+                                <button onclick="generateReportCard()" class="w-full bg-red-700 text-white py-2 rounded font-bold hover:bg-red-800 shadow">
+                                    <i class="fas fa-file-pdf mr-2"></i> Generar Libreta de Notas
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Calendar Module -->
+                <section id="calendar" class="page hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="flex items-center gap-4">
+                                <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-full"><i class="fas fa-chevron-left text-slate-600"></i></button>
+                                <h2 id="cal-month-year" class="text-2xl font-bold text-slate-800 capitalize"></h2>
+                                <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-full"><i class="fas fa-chevron-right text-slate-600"></i></button>
+                            </div>
+                            <button onclick="openModal('add-event-modal')" class="bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 shadow font-bold">
+                                <i class="fas fa-plus"></i> Nuevo Evento
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-lg overflow-hidden">
+                            <!-- Headers -->
+                            <div class="bg-slate-100 p-2 text-center font-bold text-red-600">Dom</div>
+                            <div class="bg-white p-2 text-center font-bold text-slate-700">Lun</div>
+                            <div class="bg-white p-2 text-center font-bold text-slate-700">Mar</div>
+                            <div class="bg-white p-2 text-center font-bold text-slate-700">Mié</div>
+                            <div class="bg-white p-2 text-center font-bold text-slate-700">Jue</div>
+                            <div class="bg-white p-2 text-center font-bold text-slate-700">Vie</div>
+                            <div class="bg-white p-2 text-center font-bold text-slate-700">Sáb</div>
+                            <!-- Days Container -->
+                        </div>
+                        <div id="cal-days" class="grid grid-cols-7 gap-px bg-slate-200 border-l border-r border-b border-slate-200"></div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ===== MODALES ===== -->
+
+    <!-- Add Student Modal -->
+    <div id="add-student-modal" class="hidden modal-wrapper">
+        <div class="modal-backdrop" onclick="closeModal('add-student-modal')"></div>
+        <div class="modal bg-white rounded-lg shadow-2xl w-full max-w-lg p-6 border-t-4 border-slate-900">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-xl font-bold text-slate-800">Nueva Matrícula</h3>
+                <button onclick="closeModal('add-student-modal')" class="text-slate-400 hover:text-red-500"><i class="fas fa-times fa-lg"></i></button>
+            </div>
+            <form id="form-student" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700">DNI</label>
+                        <input type="text" id="new-stu-dni" class="w-full p-2 border border-slate-300 rounded focus:ring-amber-500 outline-none" maxlength="8" required pattern="\d{8}" title="8 dígitos numéricos">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700">Fecha Matrícula</label>
+                        <input type="date" id="new-stu-date" class="w-full p-2 border border-slate-300 rounded focus:ring-amber-500 outline-none" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700">Apellidos y Nombres</label>
+                    <input type="text" id="new-stu-name" class="w-full p-2 border border-slate-300 rounded uppercase focus:ring-amber-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700">Grado</label>
+                    <select id="new-stu-grade" class="w-full p-2 border border-slate-300 rounded bg-white focus:ring-amber-500 outline-none" required></select>
+                </div>
+                <div class="flex justify-end pt-4">
+                    <button type="button" onclick="closeModal('add-student-modal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded mr-2 font-medium">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 font-bold shadow-md border border-slate-700">Matricular</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Teacher Modal -->
+    <div id="add-teacher-modal" class="hidden modal-wrapper">
+        <div class="modal-backdrop" onclick="closeModal('add-teacher-modal')"></div>
+        <div class="modal bg-white rounded-lg shadow-2xl w-full max-w-md p-6 border-t-4 border-amber-500">
+            <h3 class="text-xl font-bold text-slate-800 mb-4">Registrar Docente</h3>
+            <form id="form-teacher" class="space-y-4">
+                <input type="text" id="new-tea-name" placeholder="Nombre Completo" class="w-full p-2 border rounded focus:ring-amber-500 outline-none" required>
+                <input type="text" id="new-tea-spec" placeholder="Especialidad (Ej: Matemática)" class="w-full p-2 border rounded focus:ring-amber-500 outline-none" required>
+                <input type="email" id="new-tea-email" placeholder="Correo Institucional" class="w-full p-2 border rounded focus:ring-amber-500 outline-none">
+                <button type="submit" class="w-full py-2 bg-amber-600 text-white rounded font-bold hover:bg-amber-700 shadow-md">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Course Modal -->
+    <div id="add-course-modal" class="hidden modal-wrapper">
+        <div class="modal-backdrop" onclick="closeModal('add-course-modal')"></div>
+        <div class="modal bg-white rounded-lg shadow-2xl w-full max-w-lg p-6 border-t-4 border-slate-900">
+            <h3 class="text-xl font-bold text-slate-800 mb-4">Nueva Área Curricular</h3>
+            <form id="form-course" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="new-cour-code" placeholder="Código (Ej: MAT-1)" class="w-full p-2 border rounded focus:ring-amber-500 outline-none" required>
+                    <input type="number" id="new-cour-hours" placeholder="Horas Semanales" class="w-full p-2 border rounded focus:ring-amber-500 outline-none" required>
+                </div>
+                <input type="text" id="new-cour-name" placeholder="Nombre del Área" class="w-full p-2 border rounded focus:ring-amber-500 outline-none" required>
+                <select id="new-cour-grade" class="w-full p-2 border rounded focus:ring-amber-500 outline-none" required><option value="">Seleccione Grado</option></select>
+                <select id="new-cour-teacher" class="w-full p-2 border rounded focus:ring-amber-500 outline-none" required><option value="">Asignar Docente</option></select>
+                <button type="submit" class="w-full py-2 bg-slate-800 text-white rounded font-bold hover:bg-slate-700 shadow-md">Crear Área</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Event Modal -->
+    <div id="add-event-modal" class="hidden modal-wrapper">
+        <div class="modal-backdrop" onclick="closeModal('add-event-modal')"></div>
+        <div class="modal bg-white rounded-lg shadow-2xl w-full max-w-md p-6 border-t-4 border-amber-500">
+            <h3 class="text-xl font-bold text-slate-800 mb-4">Agendar Evento</h3>
+            <form id="form-event" class="space-y-4">
+                <input type="text" id="new-evt-title" placeholder="Título del Evento" class="w-full p-2 border rounded focus:ring-amber-500 outline-none" required>
+                <input type="date" id="new-evt-date" class="w-full p-2 border rounded focus:ring-amber-500 outline-none" required>
+                <select id="new-evt-type" class="w-full p-2 border rounded focus:ring-amber-500 outline-none">
+                    <option value="bg-red-100 text-red-800 border-red-200">Académico (Examen)</option>
+                    <option value="bg-blue-100 text-blue-800 border-blue-200">Institucional</option>
+                    <option value="bg-green-100 text-green-800 border-green-200">Feriado</option>
+                    <option value="bg-yellow-100 text-yellow-800 border-yellow-200">Reunión</option>
+                </select>
+                <button type="submit" class="w-full py-2 bg-amber-600 text-white rounded font-bold hover:bg-amber-700 shadow-md">Guardar en Agenda</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Official Report Card Modal (Printable) -->
+    <div id="official-report-modal" class="hidden modal-wrapper">
+        <div class="modal-backdrop" onclick="closeModal('official-report-modal')"></div>
+        <div class="modal bg-white w-full max-w-4xl h-auto min-h-[80vh] shadow-2xl flex flex-col">
+            <div id="printable-area" class="p-8 flex-1 bg-white text-black">
+                <!-- Header -->
+                <div class="flex justify-between items-center border-b-2 border-black pb-4 mb-6">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDuGheCrgzXXWRDyUTA6kNQ3v5cv4tOATSZw&s" class="h-24 w-24 object-contain grayscale">
+                    <div class="text-center">
+                        <h2 class="text-xl font-bold font-serif tracking-wide">MINISTERIO DE EDUCACIÓN</h2>
+                        <h3 class="text-lg font-bold">COLEGIO KERNEL</h3>
+                        <p class="text-sm font-medium">SICAYA - HUANCAYO - JUNÍN</p>
+                        <h4 class="text-md mt-4 font-bold underline">BOLETA DE INFORMACIÓN 2025</h4>
+                    </div>
+                    <div class="h-24 w-24 border border-gray-300 flex items-center justify-center text-xs text-gray-400">FOTO</div>
+                </div>
+                
+                <!-- Info -->
+                <div class="grid grid-cols-2 gap-4 text-sm mb-6 font-mono border border-black p-4">
+                    <div><strong>ESTUDIANTE:</strong> <span id="rep-card-name"></span></div>
+                    <div><strong>CÓDIGO MODULAR:</strong> <span id="rep-card-dni"></span></div>
+                    <div><strong>NIVEL:</strong> SECUNDARIA</div>
+                    <div><strong>GRADO:</strong> <span id="rep-card-grade"></span></div>
+                </div>
+
+                <!-- Grades Table -->
+                <table class="w-full border-collapse border border-black text-sm mb-8">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-black p-2 text-left">ÁREA CURRICULAR</th>
+                            <th class="border border-black p-1 w-12 text-center">B1</th>
+                            <th class="border border-black p-1 w-12 text-center">B2</th>
+                            <th class="border border-black p-1 w-12 text-center">B3</th>
+                            <th class="border border-black p-1 w-12 text-center">B4</th>
+                            <th class="border border-black p-2 w-20 text-center bg-gray-200">PROM.</th>
+                            <th class="border border-black p-2 text-center">OBSERVACIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rep-card-body"></tbody>
+                </table>
+
+                <!-- Footer Signatures -->
+                <div class="flex justify-around mt-32">
+                    <div class="text-center w-64">
+                        <div class="border-t border-black pt-2 font-bold text-xs">TUTOR(A) DE AULA</div>
+                    </div>
+                    <div class="text-center w-64">
+                        <div class="border-t border-black pt-2 font-bold text-xs">DIRECTOR(A)</div>
+                    </div>
+                </div>
+                <div class="text-center text-[10px] mt-10 text-gray-500">Documento generado oficialmente por SIGE-KERNEL el <span id="print-date"></span></div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="bg-slate-100 p-4 flex justify-end gap-3 border-t border-slate-200">
+                <button onclick="closeModal('official-report-modal')" class="px-4 py-2 bg-slate-500 text-white rounded font-medium hover:bg-slate-600">Cerrar</button>
+                <button onclick="window.print()" class="px-4 py-2 bg-slate-900 text-white rounded font-bold shadow hover:bg-slate-800"><i class="fas fa-print"></i> Imprimir Oficial</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Missing Toast Container Added -->
+    <div id="save-toast"></div>
+
+<script>
+// ===== MEGA SYSTEM CORE (Data Manager) =====
+const DB_VERSION = '3.0';
+const STORAGE_KEY = 'SIGE_KERNEL_DATA';
+
+// Default Data with Pre-filled Courses for Demo
+const defaultData = {
+    students: [],
+    teachers: [
+        { id: 'T01', name: 'Pedro Castillo', specialty: 'Matemática' },
+        { id: 'T02', name: 'Julia Ramos', specialty: 'Comunicación' },
+        { id: 'T03', name: 'Albert Einstein', specialty: 'Ciencias' }
+    ],
+    // SEEDING COURSES SO SELECTS WORK IMMEDIATELY
+    courses: [
+        { code: 'MAT-1', name: 'Matemática', gradeId: 'G1', teacherId: 'T01', hours: 6 },
+        { code: 'COM-1', name: 'Comunicación', gradeId: 'G1', teacherId: 'T02', hours: 5 },
+        { code: 'CYT-1', name: 'Ciencia y Tecnología', gradeId: 'G1', teacherId: 'T03', hours: 4 },
+        { code: 'MAT-2', name: 'Matemática', gradeId: 'G2', teacherId: 'T01', hours: 6 },
+        { code: 'COM-2', name: 'Comunicación', gradeId: 'G2', teacherId: 'T02', hours: 5 },
+        { code: 'MAT-5', name: 'Matemática', gradeId: 'G5', teacherId: 'T01', hours: 6 }
+    ],
+    gradesRecords: {},
+    attendance: [],
+    events: [
+        { title: 'Inicio Año Escolar', date: '2025-03-10', type: 'bg-blue-100 text-blue-800 border-blue-200' }
+    ]
+};
+
+const gradesList = [
+    { id: 'G1', name: '1° Secundaria' },
+    { id: 'G2', name: '2° Secundaria' },
+    { id: 'G3', name: '3° Secundaria' },
+    { id: 'G4', name: '4° Secundaria' },
+    { id: 'G5', name: '5° Secundaria' }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+    let db = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultData;
+
+    function getStudentGrade(id) { return gradesList.find(g => g.id === id); }
+    function getTeacher(id) { return db.teachers.find(t => t.id === id); }
+
+    function updateDashboard() {
+        document.getElementById('dash-total-students').innerText = db.students.length;
+        document.getElementById('dash-total-teachers').innerText = db.teachers.length;
+        document.getElementById('dash-total-courses').innerText = db.courses.length;
+        document.getElementById('dash-total-events').innerText = db.events.length;
+        
+        if(window.perfChart) window.perfChart.destroy();
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        window.perfChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: gradesList.map(g => g.name),
+                datasets: [{
+                    label: 'Promedio General',
+                    data: [14, 15, 13, 16, 15], 
+                    backgroundColor: '#0f172a',
+                    borderRadius: 4
+                }]
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 20 } } }
+        });
+        
+        if(window.distChart) window.distChart.destroy();
+        const ctx2 = document.getElementById('distributionChart').getContext('2d');
+        const counts = gradesList.map(g => db.students.filter(s => s.gradeId === g.id).length);
+        window.distChart = new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: gradesList.map(g => g.name),
+                datasets: [{
+                    data: counts,
+                    backgroundColor: ['#0f172a', '#334155', '#475569', '#d97706', '#f59e0b']
+                }]
+            }
+        });
+    }
+
+    function saveDB() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+        updateDashboard();
+    }
+
+    window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
+    window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+    
+    // Improved showToast to handle innerHTML and icon
+    window.showToast = (msg) => {
+        const t = document.getElementById('save-toast');
+        if (t) {
+            t.innerHTML = `<i class="fas fa-check-circle mr-2 text-lg"></i> ${msg}`; 
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+    };
+
+    window.calcRow = function(input) {
+        const row = input.closest('tr');
+        const inputs = row.querySelectorAll('.grade-inp');
+        let sum = 0;
+        inputs.forEach(inp => sum += parseInt(inp.value || 0));
+        const avg = Math.round(sum / 4);
+        const finalCell = row.querySelector('.final-cell');
+        finalCell.innerText = avg;
+        finalCell.className = `p-3 text-center bg-gray-50 final-cell ${avg < 11 ? 'nota-desaprobatoria' : 'nota-aprobatoria'}`;
+    };
+
+    window.saveAllGrades = function() {
+        const rows = document.querySelectorAll('#grades-table-body tr');
+        let count = 0;
+        rows.forEach(row => {
+            const sid = row.dataset.sid;
+            const cid = row.dataset.cid;
+            if(!sid) return; 
+            
+            const inputs = row.querySelectorAll('.grade-inp');
+            const gradesArr = Array.from(inputs).map(inp => parseInt(inp.value || 0));
+            const final = parseInt(row.querySelector('.final-cell').innerText);
+            
+            db.gradesRecords[`${sid}_${cid}`] = { grades: gradesArr, final: final };
+            count++;
+        });
+        saveDB();
+        showToast(`${count} registros actualizados`);
+    };
+
+    window.saveAttendance = function() {
+        const gid = document.getElementById('att-grade-select').value;
+        const date = document.getElementById('att-date').value;
+        const rows = document.querySelectorAll('#att-table-body tr');
+        
+        const records = {};
+        rows.forEach(row => {
+            const sid = row.dataset.sid;
+            const val = row.querySelector(`input[name="att_${sid}"]:checked`).value;
+            records[sid] = val;
+        });
+
+        const idx = db.attendance.findIndex(a => a.date === date && a.gradeId === gid);
+        if(idx >= 0) db.attendance[idx].records = records;
+        else db.attendance.push({ date, gradeId: gid, records });
+
+        saveDB();
+        showToast('Asistencia guardada');
+    };
+
+    window.searchForReport = function() {
+        const dni = document.getElementById('report-search-dni').value;
+        const student = db.students.find(s => s.id === dni);
+        const preview = document.getElementById('report-preview');
+        
+        if(student) {
+            preview.classList.remove('hidden');
+            document.getElementById('rep-name').innerText = student.name;
+            document.getElementById('rep-grade').innerText = getStudentGrade(student.gradeId).name;
+            window.currentReportStudent = student; 
+        } else {
+            preview.classList.add('hidden');
+            alert('Estudiante no encontrado');
+        }
+    };
+
+    window.generateReportCard = function() {
+        const s = window.currentReportStudent;
+        const coursesList = db.courses.filter(c => c.gradeId === s.gradeId);
+        
+        document.getElementById('rep-card-name').innerText = s.name;
+        document.getElementById('rep-card-dni').innerText = s.id;
+        document.getElementById('rep-card-grade').innerText = getStudentGrade(s.gradeId).name;
+        document.getElementById('print-date').innerText = new Date().toLocaleDateString();
+
+        const tbody = document.getElementById('rep-card-body');
+        tbody.innerHTML = '';
+
+        if(coursesList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center border border-black">No hay cursos asignados a este grado.</td></tr>';
+        } else {
+            coursesList.forEach(c => {
+                const key = `${s.id}_${c.code}`;
+                const r = db.gradesRecords[key] || { grades: ['-','-','-','-'], final: '-' };
+                const obs = (typeof r.final === 'number' && r.final < 11) ? 'RECUPERACIÓN' : 'APROBADO';
+                const obsClass = obs === 'RECUPERACIÓN' ? 'font-bold' : '';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="border border-black p-2">${c.name}</td>
+                        <td class="border border-black p-1 text-center">${r.grades[0]}</td>
+                        <td class="border border-black p-1 text-center">${r.grades[1]}</td>
+                        <td class="border border-black p-1 text-center">${r.grades[2]}</td>
+                        <td class="border border-black p-1 text-center">${r.grades[3]}</td>
+                        <td class="border border-black p-2 text-center font-bold bg-gray-100">${r.final}</td>
+                        <td class="border border-black p-2 text-center text-xs ${obsClass}">${typeof r.final === 'number' ? obs : '-'}</td>
+                    </tr>
+                `;
+            });
+        }
+        
+        openModal('official-report-modal');
+    };
+
+    let currentCalDate = new Date();
+    window.renderCalendar = function() {
+        const m = currentCalDate.getMonth();
+        const y = currentCalDate.getFullYear();
+        const firstDay = new Date(y, m, 1).getDay();
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+        
+        const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+        document.getElementById('cal-month-year').innerText = `${months[m]} ${y}`;
+        
+        const container = document.getElementById('cal-days');
+        container.innerHTML = '';
+        
+        for(let i=0; i<firstDay; i++) container.innerHTML += '<div class="h-24 bg-white border-r border-b border-slate-200"></div>';
+        
+        for(let i=1; i<=daysInMonth; i++) {
+            const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+            const evt = db.events.find(e => e.date === dateStr);
+            let content = `<span class="font-bold text-slate-500 p-1">${i}</span>`;
+            
+            if(evt) {
+                content += `<div class="mx-1 mt-1 p-1 rounded text-xs font-semibold truncate border ${evt.type}">${evt.title}</div>`;
+            }
+            
+            container.innerHTML += `<div class="h-24 bg-white border-r border-b border-slate-200 hover:bg-slate-50 transition cursor-pointer">${content}</div>`;
+        }
+    };
+    window.changeMonth = function(delta) {
+        currentCalDate.setMonth(currentCalDate.getMonth() + delta);
+        renderCalendar();
+    };
+
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        if(u === 'admin' && p === 'admin') {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            initApp();
+        } else {
+            document.getElementById('login-error').classList.remove('hidden');
+        }
+    });
+
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = link.getAttribute('href').substring(1);
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(target).classList.remove('hidden');
+            document.getElementById('page-title').innerText = link.innerText;
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('nav-active'));
+            link.classList.add('nav-active');
+            if(window.innerWidth < 1024) document.getElementById('sidebar').classList.add('sidebar-closed');
+        });
+    });
+
+    document.getElementById('menu-button').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('sidebar-closed');
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => location.reload());
+
+    function initApp() {
+        renderStudents();
+        renderTeachers();
+        renderCourses();
+        populateSelects();
+        renderCalendar();
+        updateDashboard();
+        document.querySelector('a[href="#dashboard"]').click();
+    }
+
+    function renderStudents() {
+        const tbody = document.getElementById('students-table-body');
+        const filter = document.getElementById('student-search').value.toLowerCase();
+        
+        tbody.innerHTML = '';
+        const list = db.students.filter(s => s.name.toLowerCase().includes(filter) || s.id.includes(filter));
+        
+        if(list.length === 0) {
+            document.getElementById('no-students-msg').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('no-students-msg').classList.add('hidden');
+
+        list.forEach(s => {
+            const grade = getStudentGrade(s.gradeId);
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
+                    <td class="p-4 font-mono text-slate-600">${s.id}</td>
+                    <td class="p-4 font-bold text-slate-800">${s.name}</td>
+                    <td class="p-4 text-center"><span class="bg-slate-100 px-2 py-1 rounded text-xs border border-slate-200">${grade.name}</span></td>
+                    <td class="p-4 text-center text-sm text-slate-500">${s.date}</td>
+                    <td class="p-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs font-bold border border-emerald-200">Matriculado</span></td>
+                    <td class="p-4 text-center">
+                        <button class="text-slate-400 hover:text-amber-600 transition"><i class="fas fa-edit"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+    
+    document.getElementById('student-search').addEventListener('input', renderStudents);
+    
+    document.getElementById('form-student').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const dni = document.getElementById('new-stu-dni').value;
+        if(db.students.find(s => s.id === dni)) { alert('¡Error! DNI ya registrado.'); return; }
+        
+        db.students.push({
+            id: dni,
+            name: document.getElementById('new-stu-name').value.toUpperCase(),
+            gradeId: document.getElementById('new-stu-grade').value,
+            date: document.getElementById('new-stu-date').value,
+            status: 1
+        });
+        saveDB();
+        renderStudents();
+        closeModal('add-student-modal');
+        showToast('Estudiante matriculado con éxito');
+        e.target.reset();
+    });
+
+    function renderTeachers() {
+        const grid = document.getElementById('teachers-grid');
+        grid.innerHTML = '';
+        db.teachers.forEach(t => {
+            grid.innerHTML += `
+                <div class="bg-white border border-slate-200 rounded-lg p-4 flex items-center shadow-sm hover:shadow-md transition">
+                    <div class="h-12 w-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl mr-4 border border-slate-200">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800">${t.name}</h4>
+                        <p class="text-sm text-amber-600 font-medium">${t.specialty}</p>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    document.getElementById('form-teacher').addEventListener('submit', (e) => {
+        e.preventDefault();
+        db.teachers.push({
+            id: 'T' + Date.now(),
+            name: document.getElementById('new-tea-name').value,
+            specialty: document.getElementById('new-tea-spec').value
+        });
+        saveDB();
+        renderTeachers();
+        populateSelects();
+        closeModal('add-teacher-modal');
+        showToast('Docente registrado');
+        e.target.reset();
+    });
+
+    function renderCourses() {
+        const tbody = document.getElementById('courses-table-body');
+        const filterGrade = document.getElementById('course-filter-grade').value;
+        
+        tbody.innerHTML = '';
+        let list = db.courses;
+        if(filterGrade !== 'all') list = list.filter(c => c.gradeId === filterGrade);
+
+        list.forEach(c => {
+            const grade = getStudentGrade(c.gradeId);
+            const teacher = getTeacher(c.teacherId) || { name: 'Sin asignar' };
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="p-3"><span class="text-xs font-bold bg-slate-200 px-2 py-1 rounded text-slate-700">${grade.name}</span></td>
+                    <td class="p-3 font-mono text-xs text-slate-500">${c.code}</td>
+                    <td class="p-3 font-medium text-slate-800">${c.name}</td>
+                    <td class="p-3 text-sm text-slate-600"><i class="fas fa-chalkboard-teacher mr-1 text-slate-400"></i> ${teacher.name}</td>
+                    <td class="p-3 text-center text-sm font-bold text-slate-700">${c.hours} hrs</td>
+                </tr>
+            `;
+        });
+    }
+    document.getElementById('course-filter-grade').addEventListener('change', renderCourses);
+    document.getElementById('form-course').addEventListener('submit', (e) => {
+        e.preventDefault();
+        db.courses.push({
+            code: document.getElementById('new-cour-code').value.toUpperCase(),
+            name: document.getElementById('new-cour-name').value,
+            gradeId: document.getElementById('new-cour-grade').value,
+            teacherId: document.getElementById('new-cour-teacher').value,
+            hours: document.getElementById('new-cour-hours').value
+        });
+        saveDB();
+        renderCourses();
+        closeModal('add-course-modal');
+        showToast('Área curricular creada');
+        e.target.reset();
+    });
+
+    const gradeGradeSelect = document.getElementById('grade-select-grade');
+    const gradeCourseSelect = document.getElementById('grade-select-course');
+    
+    // CORRECCIÓN LOGICA SELECT
+    gradeGradeSelect.addEventListener('change', () => {
+        const gid = gradeGradeSelect.value;
+        gradeCourseSelect.innerHTML = '<option value="">-- Seleccione Área --</option>';
+        
+        if (!gid) {
+            gradeCourseSelect.disabled = true;
+            gradeCourseSelect.innerHTML = '<option>-- Primero seleccione grado --</option>';
+            return;
+        }
+
+        const filteredCourses = db.courses.filter(c => c.gradeId === gid);
+        if (filteredCourses.length > 0) {
+            gradeCourseSelect.disabled = false;
+            filteredCourses.forEach(c => {
+                gradeCourseSelect.innerHTML += `<option value="${c.code}">${c.name}</option>`;
+            });
+        } else {
+            gradeCourseSelect.disabled = true;
+            gradeCourseSelect.innerHTML = '<option>Sin cursos registrados</option>';
+        }
+    });
+
+    document.getElementById('load-grades-btn').addEventListener('click', () => {
+        const gid = gradeGradeSelect.value;
+        const cid = gradeCourseSelect.value;
+        if(!gid || !cid) { alert('Seleccione Grado y Curso'); return; }
+
+        const container = document.getElementById('grades-container');
+        const placeholder = document.getElementById('grades-placeholder');
+        const tbody = document.getElementById('grades-table-body');
+        
+        container.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        tbody.innerHTML = '';
+
+        const students = db.students.filter(s => s.gradeId === gid);
+        if(students.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center">No hay alumnos.</td></tr>'; return; }
+
+        students.forEach((s, idx) => {
+            const key = `${s.id}_${cid}`;
+            const record = db.gradesRecords[key] || { grades: [0,0,0,0], final: 0 };
+            const finalClass = record.final < 11 ? 'nota-desaprobatoria' : 'nota-aprobatoria';
+            
+            tbody.innerHTML += `
+                <tr class="border-b hover:bg-slate-50 group" data-sid="${s.id}" data-cid="${cid}">
+                    <td class="p-3 text-slate-500 border-r border-slate-100">${idx+1}</td>
+                    <td class="p-3 font-medium text-slate-800 border-r border-slate-100">${s.name}</td>
+                    ${[0,1,2,3].map(i => `
+                        <td class="p-2 text-center border-r border-slate-100">
+                            <input type="number" min="0" max="20" value="${record.grades[i]}" 
+                            class="w-12 text-center border border-slate-300 rounded focus:ring-2 focus:ring-amber-500 outline-none grade-inp"
+                            oninput="calcRow(this)">
+                        </td>
+                    `).join('')}
+                    <td class="p-3 text-center bg-slate-50 final-cell ${finalClass}">${record.final}</td>
+                </tr>
+            `;
+        });
+    });
+
+    document.getElementById('load-att-btn').addEventListener('click', () => {
+        const gid = document.getElementById('att-grade-select').value;
+        const date = document.getElementById('att-date').value;
+        if(!gid || !date) { alert('Datos incompletos'); return; }
+
+        const existing = db.attendance.find(a => a.date === date && a.gradeId === gid);
+        const recordMap = existing ? existing.records : {};
+
+        const students = db.students.filter(s => s.gradeId === gid);
+        const tbody = document.getElementById('att-table-body');
+        document.getElementById('att-container').classList.remove('hidden');
+        tbody.innerHTML = '';
+
+        students.forEach(s => {
+            const status = recordMap[s.id] || 'P'; 
+            tbody.innerHTML += `
+                <tr class="border-b border-slate-100" data-sid="${s.id}">
+                    <td class="p-3 font-medium text-slate-800">${s.name}</td>
+                    <td class="p-3 text-center"><input type="radio" name="att_${s.id}" value="P" ${status==='P'?'checked':''} class="accent-emerald-600 scale-125"></td>
+                    <td class="p-3 text-center"><input type="radio" name="att_${s.id}" value="T" ${status==='T'?'checked':''} class="accent-amber-500 scale-125"></td>
+                    <td class="p-3 text-center"><input type="radio" name="att_${s.id}" value="F" ${status==='F'?'checked':''} class="accent-red-600 scale-125"></td>
+                </tr>
+            `;
+        });
+    });
+
+    document.getElementById('form-event').addEventListener('submit', (e) => {
+        e.preventDefault();
+        db.events.push({
+            title: document.getElementById('new-evt-title').value,
+            date: document.getElementById('new-evt-date').value,
+            type: document.getElementById('new-evt-type').value
+        });
+        saveDB();
+        renderCalendar();
+        closeModal('add-event-modal');
+        showToast('Evento agendado');
+        e.target.reset();
+    });
+
+    function populateSelects() {
+        const fill = (id) => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.innerHTML = '<option value="">Seleccione...</option>';
+            gradesList.forEach(g => el.innerHTML += `<option value="${g.id}">${g.name}</option>`);
+        };
+        ['new-stu-grade', 'new-cour-grade', 'grade-select-grade', 'att-grade-select', 'course-filter-grade'].forEach(fill);
+        document.getElementById('course-filter-grade').innerHTML = '<option value="all">Todos los Grados</option>' + document.getElementById('course-filter-grade').innerHTML;
+
+        const tSel = document.getElementById('new-cour-teacher');
+        tSel.innerHTML = '<option value="">Asignar Docente</option>';
+        db.teachers.forEach(t => tSel.innerHTML += `<option value="${t.id}">${t.name}</option>`);
+    }
+});
+</script>
+</body>
+</html>
